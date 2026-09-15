@@ -1,69 +1,94 @@
 #include <iostream>
+#include <string>
 #include <vector>
-#include <Windows.h>
+#ifdef _WIN32
+#  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
+#  include <Windows.h>
+#endif
 
-static void printTitle() {
-	std::cout << std::endl;
-	std::cout << "1. Добавить задачу." << std::endl;
-	std::cout << "2. Показать список задач." << std::endl;
-	std::cout << "3. Удалить задачу по индексу." << std::endl;
-	std::cout << "4. Выход." << std::endl;
-}
-
-static int task() {
-	printTitle();
-
-	int answer = 0;
-	std::cin >> answer;
-	std::cout << std::endl;
-
-	return answer;
-}
-
-static void addTask(std::vector<std::string> &curVector) {
-	std::cout << "Напишите задачу: ";
-	std::string curTask;
-	std::cin >> curTask;
-	curVector.push_back(curTask);
-}
-
-static void showTasks(std::vector<std::string>& curVector) {
-	for (auto it = curVector.begin(); it != curVector.end(); ++it) {
-		std::cout << *it << std::endl;
+namespace {
+	void clearInput() {
+		std::cin.clear();
+		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
-}
 
-static void removeTask(std::vector<std::string>& curVector, size_t &index) {
-	if (index < curVector.size()) curVector.erase(curVector.begin() + index);
-}
-int main() {
-	SetConsoleOutputCP(CP_UTF8);
-	std::vector<std::string> myVector;
-	bool isStoped = false;
-	while (!isStoped) {
-		switch (task()) {
-		case 1:
-			addTask(myVector);
-			break;
-		case 2:
-			showTasks(myVector);
-			break;
-		case 3:
-			std::cout << "Введите индекс, который хотите удалить: ";
-			size_t index;
-			std::cin >> index;
-			std::cout << std::endl;
-			removeTask(myVector, index);
-			break;
-		case 4:
-			isStoped = true;
-			break;
-		default:
-			std::cout << "Нет такого задания!" << std::endl;
-			break;
+	int askInt(const std::string& prompt) {
+		while (true) {
+			std::cout << prompt;
+			int value;
+			if (std::cin >> value) {
+				clearInput();
+				return value;
+			}
+			std::cout << "Это не число, попробуй ещё раз.\n";
+			clearInput();
 		}
-		continue;
+	}
+	void printMenu() {
+		std::cout << "\n"
+			<< "1. Добавить задачу.\n"
+			<< "2. Показать список задач.\n"
+			<< "3. Удалить задачу по индексу.\n"
+			<< "4. Выход.\n";
+	}
+
+	void addTask(std::vector<std::string>& curVector) {
+		std::cout << "Напишите задачу: ";
+		std::string curTask;
+		std::getline(std::cin, curTask);
+		if (curTask.empty()) {
+			std::cout << "Пустая задача, отмена.\n";
+			return;
+		}
+		curVector.push_back(std::move(curTask));
+		std::cout << "Добавлено. Всего задач: " << curVector.size() << "\n";
+	}
+
+	void showTasks(std::vector<std::string>& curVector) {
+		if (curVector.empty()) {
+			std::cout << "Список пуст.\n";
+			return;
+		}
+		for (auto it = curVector.begin(); it != curVector.end(); ++it) {
+			std::cout << *it << "\n";
+		}
+	}
+
+	void removeTask(std::vector<std::string>& curVector) {
+		if (curVector.empty()) {
+			std::cout << "Список пуст, нечего удалять.\n";
+			return;
+		}
+
+		std::cout << "Введите индекс, который хотите удалить: ";
+		auto index = askInt("Введите индекс: ");
+		if (index < 0 || static_cast<size_t>(index) >= curVector.size()) {
+			std::cout << "Индекс вне диапазона.\n";
+			return;
+		}		
+		curVector.erase(curVector.begin() + index);
+		std::cout << "Удалено.\n";
+	}
+} //namespace
+
+int main() {
+#ifdef _WIN32
+	SetConsoleOutputCP(CP_UTF8);
+#endif
+
+	std::vector<std::string> myVector;
+	bool running = true;
+	while (running) {
+		printMenu();
+		switch (askInt("> ")) {
+		case 1: addTask(myVector); break;
+		case 2: showTasks(myVector); break;
+		case 3: removeTask(myVector); break;
+		case 4: running = false; break;
+		default: std::cout << "Нет такого задания!\n"; break;
+		}
 	}
 	
-	
+	return 0;
 }
