@@ -1,11 +1,13 @@
-#include <iostream>
-#include <string>
-#include <vector>
 #ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <Windows.h>
 #endif
+
+#include <iostream>
+#include <limits>
+#include "TaskManager.h"
+
 
 namespace {
 	void clearInput() {
@@ -29,46 +31,51 @@ namespace {
 		std::cout << "\n"
 			<< "1. Добавить задачу.\n"
 			<< "2. Показать список задач.\n"
-			<< "3. Удалить задачу по индексу.\n"
-			<< "4. Выход.\n";
+			<< "3. Удалить задачу по id.\n"
+			<< "4. Переключить статус задачи.\n"
+			<< "5. Выход.\n";
 	}
 
-	void addTask(std::vector<std::string>& curVector) {
+	void addTask(TaskManager &manager) {
 		std::cout << "Напишите задачу: ";
 		std::string curTask;
 		std::getline(std::cin, curTask);
-		if (curTask.empty()) {
+		if (!manager.add(curTask)) {
 			std::cout << "Пустая задача, отмена.\n";
 			return;
 		}
-		curVector.push_back(std::move(curTask));
-		std::cout << "Добавлено. Всего задач: " << curVector.size() << "\n";
+		
+		std::cout << "Добавлено. Всего задач: " << manager.size() << "\n";
 	}
 
-	void showTasks(std::vector<std::string>& curVector) {
-		if (curVector.empty()) {
-			std::cout << "Список пуст.\n";
+	void removeTask(TaskManager &manager) {
+		if (manager.empty()) {
+			std::cout << "Список пуст, нечего удалять\n";
 			return;
 		}
-		for (auto it = curVector.begin(); it != curVector.end(); ++it) {
-			std::cout << *it << "\n";
+		manager.printTasks();
+
+		const int id = askInt("Введите id, который хотите удалить: ");
+		if (!manager.remove(id)) {
+			std::cout << "Задача с таким id не найдена.\n";
+			return;
 		}
+		std::cout <<"Задача id=" << id << " удалена.\n";	
 	}
 
-	void removeTask(std::vector<std::string>& curVector) {
-		if (curVector.empty()) {
-			std::cout << "Список пуст, нечего удалять.\n";
+	void toggleTask(TaskManager& manager) {
+		if (manager.empty()) {
+			std::cout << "Список пуст, нечего изменять\n";
 			return;
 		}
+		manager.printTasks();
 
-		std::cout << "Введите индекс, который хотите удалить: ";
-		auto index = askInt("Введите индекс: ");
-		if (index < 0 || static_cast<size_t>(index) >= curVector.size()) {
-			std::cout << "Индекс вне диапазона.\n";
+		const int id = askInt("Введите id задачи: ");
+		if (!manager.toggleDone(id)) {
+			std::cout << "Нет задачи с таким id " << id << "\n";
 			return;
-		}		
-		curVector.erase(curVector.begin() + index);
-		std::cout << "Удалено.\n";
+		}
+		std::cout << "Задача id=" << id << " статус изменен.\n";
 	}
 } //namespace
 
@@ -78,15 +85,16 @@ int main() {
 	SetConsoleOutputCP(CP_UTF8);
 #endif
 
-	std::vector<std::string> myVector;
 	bool running = true;
+	TaskManager manager;
 	while (running) {
 		printMenu();
 		switch (askInt("> ")) {
-		case 1: addTask(myVector); break;
-		case 2: showTasks(myVector); break;
-		case 3: removeTask(myVector); break;
-		case 4: running = false; break;
+		case 1: addTask(manager); break;
+		case 2: manager.printTasks(); break;
+		case 3: removeTask(manager); break;
+		case 4: toggleTask(manager); break;
+		case 5: running = false; break;
 		default: std::cout << "Нет такого задания!\n"; break;
 		}
 	}
