@@ -57,7 +57,7 @@ bool TaskManager::empty() {
 
 bool TaskManager::save(const std::string fileName) const {
 	// id | title | done
-	std::ofstream outFile("tasks.txt");
+	std::ofstream outFile(fileName);
 	if (!outFile) return false;
 	for (const auto& task : m_tasks) {
 		outFile << task.id << '|'
