@@ -33,7 +33,8 @@ namespace {
 			<< "2. Показать список задач.\n"
 			<< "3. Удалить задачу по id.\n"
 			<< "4. Переключить статус задачи.\n"
-			<< "5. Выход.\n";
+			<< "5. Сохранить\n"
+			<< "6. Выход.\n";
 	}
 
 	void addTask(TaskManager &manager) {
@@ -77,6 +78,15 @@ namespace {
 		}
 		std::cout << "Задача id=" << id << " статус изменен.\n";
 	}
+
+	void saveTasks(TaskManager& manager) {
+		if (!manager.save("tasks.txt")) {
+			std::cout << "Не удалось открыть файл.\n";
+			return;
+		}
+		std::cout << "Сохранено.\n";
+	}
+	
 } //namespace
 
 int main() {
@@ -87,6 +97,13 @@ int main() {
 
 	bool running = true;
 	TaskManager manager;
+	const LoadResult res = manager.load("tasks.txt");
+	if (!res.success) {
+		std::cout << "Не удалось открыть tasks.txt.\n";
+	}
+	else if (res.skipped > 0) {
+		std::cout << "Внимание: " << res.skipped << " строк(и) не удалось прочитать.\n";
+	}
 	while (running) {
 		printMenu();
 		switch (askInt("> ")) {
@@ -94,10 +111,13 @@ int main() {
 		case 2: manager.printTasks(); break;
 		case 3: removeTask(manager); break;
 		case 4: toggleTask(manager); break;
-		case 5: running = false; break;
+		case 5: saveTasks(manager); break;
+		case 6: running = false; break;
 		default: std::cout << "Нет такого задания!\n"; break;
 		}
 	}
-	
+	if (!manager.save("tasks.txt")) {
+		std::cout << "ВНИМАНИЕ: не удалось сохранить задачи!\n";
+	}
 	return 0;
 }

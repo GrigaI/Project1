@@ -1,6 +1,8 @@
 #include "TaskManager.h"
 #include <algorithm>
 #include <iostream>
+#include <fstream>
+
 
 TaskManager::TaskIter TaskManager::findById(int id) {
 	return std::find_if(m_tasks.begin(), m_tasks.end(), [id](const Task& task) {return task.id == id;});
@@ -51,4 +53,67 @@ size_t TaskManager::size() const {
 
 bool TaskManager::empty() {
 	return m_tasks.empty();
+}
+
+bool TaskManager::save(const std::string fileName) const {
+	// id | title | done
+	std::ofstream outFile("tasks.txt");
+	if (!outFile) return false;
+	for (const auto& task : m_tasks) {
+		outFile << task.id << '|'
+			<< task.title << '|'
+			<< task.done << '\n';
+	}
+
+	return true;
+}
+
+std::optional<Task> TaskManager::parseLine(std::string& line) {
+	try {
+		std::istringstream ss(line);
+		std::string str;
+		if (!std::getline(ss, str, '|')) return std::nullopt;
+		int id = std::stoi(str);
+		if (!std::getline(ss, str, '|')) return std::nullopt;
+		std::string title = str;
+		if (!std::getline(ss, str)) return std::nullopt;
+		const bool done = std::stoi(str) != 0;
+
+		return Task{ id, title, done};
+	} catch (const std::exception&) {
+		return std::nullopt;
+	}
+}
+
+LoadResult TaskManager::load(const std::string& fileName) {
+	LoadResult result;
+	std::ifstream inFile(fileName);
+	m_tasks.clear();
+	if (!inFile) {		
+		m_nextId = 1;
+		result.success = true;
+		return result;
+	}
+
+	std::string line;
+	
+	while (std::getline(inFile, line)) {
+		const auto task = parseLine(line);
+		if (task) {
+			m_tasks.push_back(*task);
+			++result.loaded;
+		}
+		else {
+			++result.skipped;
+		}
+	}
+	if (m_tasks.empty()) {
+		m_nextId = 1;
+	}
+	else {
+		auto maxIt = std::max_element(m_tasks.begin(), m_tasks.end(), [](const Task& a, const Task& b) {return a.id < b.id;});
+		m_nextId = maxIt->id + 1;
+	}
+	result.success = true;
+	return result;
 }
