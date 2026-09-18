@@ -34,7 +34,10 @@ namespace {
 			<< "3. Удалить задачу по id.\n"
 			<< "4. Переключить статус задачи.\n"
 			<< "5. Сохранить\n"
-			<< "6. Выход.\n";
+			<< "6. Сортировать по id\n"
+			<< "7. Сортировать по статусу\n"
+			<< "8. Сортировать по названию\n"
+			<< "9. Выход.\n";
 	}
 
 	void addTask(TaskManager &manager) {
@@ -86,6 +89,15 @@ namespace {
 		}
 		std::cout << "Сохранено.\n";
 	}
+
+	void sortTasks(TaskManager& manager, TaskManager::SortMode mode) {
+		if (manager.empty()) {
+			std::cout << "Список пуст, нечего сортировать\n";
+			return;
+		}
+		manager.sort(mode);
+		manager.printTasks();
+	}
 	
 } //namespace
 
@@ -112,7 +124,10 @@ int main() {
 		case 3: removeTask(manager); break;
 		case 4: toggleTask(manager); break;
 		case 5: saveTasks(manager); break;
-		case 6: running = false; break;
+		case 6: sortTasks(manager, TaskManager::SortMode::ById); break;
+		case 7: sortTasks(manager, TaskManager::SortMode::ByStatus); break;
+		case 8: sortTasks(manager, TaskManager::SortMode::ByTitle); break;
+		case 9: running = false; break;
 		default: std::cout << "Нет такого задания!\n"; break;
 		}
 	}

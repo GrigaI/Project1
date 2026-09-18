@@ -117,3 +117,21 @@ LoadResult TaskManager::load(const std::string& fileName) {
 	result.success = true;
 	return result;
 }
+
+void TaskManager::sort(SortMode mode) {
+	switch (mode) {
+	case SortMode::ById: std::sort(m_tasks.begin(), m_tasks.end(), 
+		[](const Task& a, const Task& b) { return a.id < b.id; });
+		break;
+	case SortMode::ByStatus: std::sort(m_tasks.begin(), m_tasks.end(),
+		[](const Task& a, const Task& b) {
+			if (a.done != b.done) return a.done < b.done;
+			return a.id < b.id;
+		});
+		break;
+	case SortMode::ByTitle: std::sort(m_tasks.begin(), m_tasks.end(), 
+		[](const Task& a, const Task& b) { return a.title < b.title; });
+		break;
+	}
+	
+}

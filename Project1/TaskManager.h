@@ -15,6 +15,10 @@ class TaskManager
 	TaskIter findById(int id);
 	std::optional<Task> parseLine(std::string& line);
 public:
+	enum class SortMode{
+		ById, ByStatus, ByTitle
+	};
+
 	bool add(const std::string &task);
 	bool remove(int id);
 	bool toggleDone(int id);
@@ -23,6 +27,7 @@ public:
 	bool empty();
 	bool save(const std::string fileName) const;
 	LoadResult load(const std::string& fileName);
+	void sort(SortMode mode);
 
 private:
 	std::vector<Task> m_tasks;
