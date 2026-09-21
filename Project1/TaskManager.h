@@ -11,7 +11,7 @@ struct LoadResult {
 };
 class TaskManager 
 {
-	using TaskIter = std::vector<Task>::iterator;
+	using TaskIter = std::vector<std::unique_ptr<Task>>::iterator;
 	TaskIter findById(int id);
 	std::optional<Task> parseLine(std::string& line);
 public:
@@ -19,7 +19,7 @@ public:
 		ById, ByStatus, ByTitle
 	};
 
-	bool add(const std::string &task);
+	bool add(std::unique_ptr<Task> task);
 	bool remove(int id);
 	bool toggleDone(int id);
 	void printTasks() const;
@@ -30,7 +30,7 @@ public:
 	void sort(SortMode mode);
 
 private:
-	std::vector<Task> m_tasks;
+	std::vector<std::unique_ptr<Task>> m_tasks;
 	int m_nextId = 1;
 };
 

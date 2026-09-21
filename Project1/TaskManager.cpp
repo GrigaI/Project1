@@ -5,13 +5,15 @@
 
 
 TaskManager::TaskIter TaskManager::findById(int id) {
-	return std::find_if(m_tasks.begin(), m_tasks.end(), [id](const Task& task) {return task.id == id;});
+	return std::find_if(m_tasks.begin(), m_tasks.end(), [id](const std::unique_ptr<Task>& task) {return task->id() == id;});
 }
 
-bool TaskManager::add(const std::string& task) {
-	if (task.empty()) return false;
-	m_tasks.push_back(Task{ m_nextId, task, false });
-	m_nextId++;
+bool TaskManager::add(std::unique_ptr<Task> task) {
+	if (!task) return false;
+	if (task->title().empty()) return false;
+	if (task->id() != m_nextId) return false;
+	m_tasks.push_back(std::move(task));
+	++m_nextId;
 	return true;
 }
 
@@ -25,7 +27,7 @@ bool TaskManager::remove(int id) {
 bool TaskManager::toggleDone(int id) {
 	auto iter = findById(id);
 	if (iter == m_tasks.end()) return false;
-	iter->done = !iter->done;
+	(*iter)->toggle();
 	return true;
 }
 
@@ -36,13 +38,13 @@ void TaskManager::printTasks() const {
 	}
 	
 	for (const auto& task : m_tasks) {
-		const char mark = task.done ? 'x' : ' ';
+		const char mark = task->done() ? 'x' : ' ';
 		std::cout << "["
 			<< mark
 			<< "] "
-			<< task.id
-			<< " "
-			<< task.title
+			<< task->id()
+			<< ". "
+			<< task->describe()
 			<< "\n";		
 	}
 }
