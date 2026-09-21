@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 
 TaskManager::TaskIter TaskManager::findById(int id) {
@@ -53,37 +54,46 @@ size_t TaskManager::size() const {
 	return m_tasks.size();
 }
 
-bool TaskManager::empty() {
+bool TaskManager::empty() const {
 	return m_tasks.empty();
 }
 
-bool TaskManager::save(const std::string fileName) const {
-	// id | title | done
+bool TaskManager::save(const std::string& fileName) const {
 	std::ofstream outFile(fileName);
 	if (!outFile) return false;
 	for (const auto& task : m_tasks) {
-		outFile << task.id << '|'
-			<< task.title << '|'
-			<< task.done << '\n';
+		outFile << task->serialize() << '\n';
 	}
 
 	return true;
 }
 
-std::optional<Task> TaskManager::parseLine(std::string& line) {
+std::unique_ptr<Task> TaskManager::parseLine(const std::string& line) {
 	try {
 		std::istringstream ss(line);
 		std::string str;
-		if (!std::getline(ss, str, '|')) return std::nullopt;
+		if (!std::getline(ss, str, '|')) return nullptr;
+		if (str != "R" && str != "D" && str != "C") return nullptr;
+		const std::string  type = str;
+		if (!std::getline(ss, str, '|')) return nullptr;
 		int id = std::stoi(str);
-		if (!std::getline(ss, str, '|')) return std::nullopt;
+		if (!std::getline(ss, str, '|')) return nullptr;
 		std::string title = str;
-		if (!std::getline(ss, str)) return std::nullopt;
+		if (!std::getline(ss, str, '|')) return nullptr;
 		const bool done = std::stoi(str) != 0;
-
-		return Task{ id, title, done};
+		if (type == "R") {
+			return std::make_unique<RegularTask>(id, title, done);
+		} else if (type == "D") {
+			if (!std::getline(ss, str)) return nullptr;
+			return std::make_unique<DeadlineTask>(id, title, done, str);
+		}
+		else if (type == "C") {
+			if (!std::getline(ss, str)) return nullptr;
+			return std::make_unique<RecurringTask>(id, title, done, str);
+		}
+		return nullptr;
 	} catch (const std::exception&) {
-		return std::nullopt;
+		return nullptr;
 	}
 }
 
@@ -100,9 +110,9 @@ LoadResult TaskManager::load(const std::string& fileName) {
 	std::string line;
 	
 	while (std::getline(inFile, line)) {
-		const auto task = parseLine(line);
+		auto task = parseLine(line);
 		if (task) {
-			m_tasks.push_back(*task);
+			m_tasks.push_back(std::move(task));
 			++result.loaded;
 		}
 		else {
@@ -113,8 +123,9 @@ LoadResult TaskManager::load(const std::string& fileName) {
 		m_nextId = 1;
 	}
 	else {
-		auto maxIt = std::max_element(m_tasks.begin(), m_tasks.end(), [](const Task& a, const Task& b) {return a.id < b.id;});
-		m_nextId = maxIt->id + 1;
+		auto maxIt = std::max_element(m_tasks.begin(), m_tasks.end(), 
+			[](const std::unique_ptr<Task>& a, const std::unique_ptr<Task>& b) {return a->id() < b->id();});
+		m_nextId = (*maxIt)->id() + 1;
 	}
 	result.success = true;
 	return result;
@@ -122,17 +133,20 @@ LoadResult TaskManager::load(const std::string& fileName) {
 
 void TaskManager::sort(SortMode mode) {
 	switch (mode) {
-	case SortMode::ById: std::sort(m_tasks.begin(), m_tasks.end(), 
-		[](const Task& a, const Task& b) { return a.id < b.id; });
+	case SortMode::ById: 
+		std::sort(m_tasks.begin(), m_tasks.end(), 
+		[](const std::unique_ptr<Task>& a, const std::unique_ptr<Task>& b) { return a->id() < b->id(); });
 		break;
-	case SortMode::ByStatus: std::sort(m_tasks.begin(), m_tasks.end(),
-		[](const Task& a, const Task& b) {
-			if (a.done != b.done) return a.done < b.done;
-			return a.id < b.id;
+	case SortMode::ByStatus: 
+		std::sort(m_tasks.begin(), m_tasks.end(),
+		[](const std::unique_ptr<Task>& a, const std::unique_ptr<Task>& b) {
+			if (a->done() != b->done()) return a->done() < b->done();
+			return a->id() < b->id();
 		});
 		break;
-	case SortMode::ByTitle: std::sort(m_tasks.begin(), m_tasks.end(), 
-		[](const Task& a, const Task& b) { return a.title < b.title; });
+	case SortMode::ByTitle: 
+		std::sort(m_tasks.begin(), m_tasks.end(), 
+		[](const std::unique_ptr<Task>& a, const std::unique_ptr<Task>& b) { return a->title() < b->title(); });
 		break;
 	}
 	

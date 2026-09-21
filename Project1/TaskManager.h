@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
+#include <memory>
+#include <string>
 #include "Task.h"
-#include <sstream>
-#include <optional>
 
 struct LoadResult {
 	bool success = false;
@@ -13,7 +13,7 @@ class TaskManager
 {
 	using TaskIter = std::vector<std::unique_ptr<Task>>::iterator;
 	TaskIter findById(int id);
-	std::optional<Task> parseLine(std::string& line);
+	std::unique_ptr<Task> parseLine(const std::string& line);
 public:
 	enum class SortMode{
 		ById, ByStatus, ByTitle
@@ -23,11 +23,12 @@ public:
 	bool remove(int id);
 	bool toggleDone(int id);
 	void printTasks() const;
-	size_t size() const;
-	bool empty();
-	bool save(const std::string fileName) const;
+	std::size_t size() const;
+	bool empty() const;
+	bool save(const std::string& fileName) const;
 	LoadResult load(const std::string& fileName);
 	void sort(SortMode mode);
+	int nextId() const { return m_nextId; }
 
 private:
 	std::vector<std::unique_ptr<Task>> m_tasks;
