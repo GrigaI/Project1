@@ -151,3 +151,31 @@ void TaskManager::sort(SortMode mode) {
 	}
 	
 }
+
+void TaskManager::insert(std::unique_ptr<Task> task, std::size_t position) {
+	if (!task) return;
+	if (position > m_tasks.size()) position = m_tasks.size();
+	m_tasks.insert(m_tasks.begin() + static_cast<std::ptrdiff_t>(position), std::move(task));
+}
+
+std::optional<std::pair<std::unique_ptr<Task>, std::size_t>> TaskManager::extractWithPosition(int id) {
+	auto it = findById(id);
+	if (it == m_tasks.end()) return std::nullopt;
+	const std::size_t pos = static_cast<std::size_t>(std::distance(m_tasks.begin(), it));
+	auto task = std::move(*it);
+	m_tasks.erase(it);
+	return std::make_pair(std::move(task), pos);
+}
+
+void TaskManager::pushCommand(std::unique_ptr<Command> cmd) {
+	m_history.push_back(std::move(cmd));
+}
+
+bool TaskManager::undo() {
+	if (m_history.empty()) return false;
+	auto cmd = std::move(m_history.back());
+	m_history.pop_back();
+	cmd->undo();
+	return true;
+}
+

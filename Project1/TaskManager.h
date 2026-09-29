@@ -2,7 +2,11 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <optional>
+#include <utility>
+#include <cstddef>
 #include "Task.h"
+#include "Command.h"
 
 struct LoadResult {
 	bool success = false;
@@ -29,9 +33,14 @@ public:
 	LoadResult load(const std::string& fileName);
 	void sort(SortMode mode);
 	int nextId() const { return m_nextId; }
+	void insert(std::unique_ptr<Task> task, std::size_t position);
+	std::optional<std::pair<std::unique_ptr<Task>, std::size_t>> extractWithPosition(int id);
+	void pushCommand(std::unique_ptr<Command> cmd);
+	bool undo();
 
 private:
 	std::vector<std::unique_ptr<Task>> m_tasks;
+	std::vector<std::unique_ptr<Command>> m_history;
 	int m_nextId = 1;
 };
 

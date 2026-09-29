@@ -37,7 +37,8 @@ namespace {
 			<< "6. Сортировать по id\n"
 			<< "7. Сортировать по статусу\n"
 			<< "8. Сортировать по названию\n"
-			<< "9. Выход.\n";
+			<< "9. Отменить последнее действие\n"
+			<< "10. Выход.\n";
 	}
 
 	void addTask(TaskManager &manager) {
@@ -53,16 +54,17 @@ namespace {
 			"2. С дедлайном\n"
 			"3. Повторяющаяся\n";
 		std::unique_ptr<Task> task;
+		const int id = manager.nextId();
 		switch (askInt(prompt)) {
 			case 1: 
-				task = std::make_unique<RegularTask>(manager.nextId(), title, false);
+				task = std::make_unique<RegularTask>(id, title, false);
 				break;
 			case 2:
 			{
 				std::cout << "Введите дату: ";
 				std::string date;
 				std::getline(std::cin, date);
-				task = std::make_unique<DeadlineTask>(manager.nextId(), title, false, date);
+				task = std::make_unique<DeadlineTask>(id, title, false, date);
 				break;
 			}
 			case 3: 
@@ -70,7 +72,7 @@ namespace {
 				std::cout << "Введите период: ";
 				std::string period;
 				std::getline(std::cin, period);
-				task = std::make_unique<RecurringTask>(manager.nextId(), title, false, period);
+				task = std::make_unique<RecurringTask>(id, title, false, period);
 				break;
 			}
 			default: 
@@ -81,6 +83,7 @@ namespace {
 			std::cout << "Не удалось создать задачу, отмена.\n";
 			return;
 		}
+		manager.pushCommand(std::make_unique<AddCommand>(manager, id));
 		std::cout << "Добавлено. Всего задач: " << manager.size() << "\n";
 	}
 
@@ -92,10 +95,17 @@ namespace {
 		manager.printTasks();
 
 		const int id = askInt("Введите id, который хотите удалить: ");
-		if (!manager.remove(id)) {
+		auto extracted = manager.extractWithPosition(id);
+		if (!extracted) {
 			std::cout << "Задача с таким id не найдена.\n";
 			return;
 		}
+		auto cmd = std::make_unique<RemoveCommand>(
+			manager,
+			std::move(extracted->first),
+			extracted->second
+		);
+		manager.pushCommand(std::move(cmd));
 		std::cout <<"Задача id=" << id << " удалена.\n";	
 	}
 
@@ -111,6 +121,7 @@ namespace {
 			std::cout << "Нет задачи с таким id " << id << "\n";
 			return;
 		}
+		manager.pushCommand(std::make_unique<ToggleCommand>(manager, id));
 		std::cout << "Задача id=" << id << " статус изменен.\n";
 	}
 
@@ -128,6 +139,15 @@ namespace {
 			return;
 		}
 		manager.sort(mode);
+		manager.printTasks();
+	}
+
+	void undoLast(TaskManager& manager) {
+		if (!manager.undo()) {
+			std::cout << "Нечего отменять.\n";
+			return;
+		}
+		std::cout << "Отменено.\n";
 		manager.printTasks();
 	}
 	
@@ -159,7 +179,8 @@ int main() {
 		case 6: sortTasks(manager, TaskManager::SortMode::ById); break;
 		case 7: sortTasks(manager, TaskManager::SortMode::ByStatus); break;
 		case 8: sortTasks(manager, TaskManager::SortMode::ByTitle); break;
-		case 9: running = false; break;
+		case 9: undoLast(manager); break;
+		case 10: running = false; break;
 		default: std::cout << "Нет такого задания!\n"; break;
 		}
 	}
