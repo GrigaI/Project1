@@ -5,6 +5,8 @@
 #include <optional>
 #include <utility>
 #include <cstddef>
+#include <fstream>
+#include <format>
 #include "Task.h"
 #include "Command.h"
 
@@ -13,6 +15,22 @@ struct LoadResult {
 	int loaded = 0;
 	int skipped = 0;
 };
+
+class TextWriter {
+public:
+	std::string write(const Task& task) const {
+		return task.serialize();
+	}
+};
+
+class CsvWriter {
+public:
+	std::string write(const Task& task) const {
+		return std::format("{};{};{}", task.id(), task.title(), task.done() ? 1 : 0);
+	}
+};
+
+
 class TaskManager 
 {
 	using TaskIter = std::vector<std::unique_ptr<Task>>::iterator;
@@ -29,7 +47,6 @@ public:
 	void printTasks() const;
 	std::size_t size() const;
 	bool empty() const;
-	bool save(const std::string& fileName) const;
 	LoadResult load(const std::string& fileName);
 	void sort(SortMode mode);
 	int nextId() const { return m_nextId; }
@@ -38,9 +55,23 @@ public:
 	void pushCommand(std::unique_ptr<Command> cmd);
 	bool undo();
 
+	template <typename TWriter>
+	bool saveAs(const std::string& fileName) const;
+
 private:
 	std::vector<std::unique_ptr<Task>> m_tasks;
 	std::vector<std::unique_ptr<Command>> m_history;
 	int m_nextId = 1;
 };
 
+template<typename TWriter>
+bool TaskManager::saveAs(const std::string& fileName) const {
+	std::ofstream out(fileName);
+	if (!out) return false;
+	out.write("\xEF\xBB\xBF", 3);   // UTF-8 BOM
+	TWriter writer;
+	for (const auto& task : m_tasks) {
+		out << writer.write(*task) << '\n';
+	}
+	return true;
+}

@@ -1,3 +1,4 @@
+#include <format>
 #include "Task.h"
 
 Task::Task(int id, const std::string& title, bool done) 
@@ -25,11 +26,11 @@ RegularTask::RegularTask(int id, const std::string& title, bool done)
 }
 
 std::string RegularTask::describe() const {
-	return "Обычная: " + title();
+	return std::format("Обычная: {}", title());
 }
 
 std::string RegularTask::serialize() const {
-	return "R|" + std::to_string(id()) + "|" + title() + "|" + std::to_string(done());
+	return std::format("R|{}|{}|{}", id(), title(), done() ? 1 : 0);
 }
 
 DeadlineTask::DeadlineTask(int id, const std::string& title, bool done, const std::string& deadline)
@@ -37,11 +38,11 @@ DeadlineTask::DeadlineTask(int id, const std::string& title, bool done, const st
 }
 
 std::string DeadlineTask::describe() const {
-	return "Дедлайн " + m_deadline + ": " + title();
+	return std::format("Дедлайн {}: {}", m_deadline, title());
 }
 
 std::string DeadlineTask::serialize() const {
-	return "D|" + std::to_string(id()) + "|" + title() + "|" + std::to_string(done()) + "|" + m_deadline;
+	return std::format("D|{}|{}|{}|{}", id(), title(), done() ? 1 : 0, m_deadline);
 }
 
 RecurringTask::RecurringTask(int id, const std::string& title, bool done, const std::string& period)
@@ -49,9 +50,9 @@ RecurringTask::RecurringTask(int id, const std::string& title, bool done, const 
 }
 
 std::string RecurringTask::describe() const {
-	return "Повтор (" + m_period + "): " + title();
+	return std::format("Повтор ({}): {}", m_period, title());
 }
 
 std::string RecurringTask::serialize() const {
-	return "C|" + std::to_string(id()) + "|" + title() + "|" + std::to_string(done()) + "|" + m_period;
+	return std::format("C|{}|{}|{}|{}", id(), title(), done() ? 1 : 0, m_period);
 }

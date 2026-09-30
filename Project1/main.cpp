@@ -33,12 +33,13 @@ namespace {
 			<< "2. Показать список задач.\n"
 			<< "3. Удалить задачу по id.\n"
 			<< "4. Переключить статус задачи.\n"
-			<< "5. Сохранить\n"
-			<< "6. Сортировать по id\n"
-			<< "7. Сортировать по статусу\n"
-			<< "8. Сортировать по названию\n"
-			<< "9. Отменить последнее действие\n"
-			<< "10. Выход.\n";
+			<< "5. Сохранить в txt\n"
+			<< "6. Сохранить в csv\n"
+			<< "7. Сортировать по id\n"
+			<< "8. Сортировать по статусу\n"
+			<< "9. Сортировать по названию\n"
+			<< "10. Отменить последнее действие\n"
+			<< "11. Выход.\n";
 	}
 
 	void addTask(TaskManager &manager) {
@@ -125,12 +126,20 @@ namespace {
 		std::cout << "Задача id=" << id << " статус изменен.\n";
 	}
 
-	void saveTasks(TaskManager& manager) {
-		if (!manager.save("tasks.txt")) {
+	void saveAsTxt(TaskManager& manager) {
+		if (!manager.saveAs<TextWriter>("tasks.txt")) {
 			std::cout << "Не удалось открыть файл.\n";
 			return;
 		}
-		std::cout << "Сохранено.\n";
+		std::cout << "Сохранено в .txt.\n";
+	}
+
+	void saveAsCsv(TaskManager& manager) {
+		if (!manager.saveAs<CsvWriter>("tasks.csv")) {
+			std::cout << "Не удалось открыть файл.\n";
+			return;
+		}
+		std::cout << "Сохранено в .csv.\n";
 	}
 
 	void sortTasks(TaskManager& manager, TaskManager::SortMode mode) {
@@ -175,16 +184,17 @@ int main() {
 		case 2: manager.printTasks(); break;
 		case 3: removeTask(manager); break;
 		case 4: toggleTask(manager); break;
-		case 5: saveTasks(manager); break;
-		case 6: sortTasks(manager, TaskManager::SortMode::ById); break;
-		case 7: sortTasks(manager, TaskManager::SortMode::ByStatus); break;
-		case 8: sortTasks(manager, TaskManager::SortMode::ByTitle); break;
-		case 9: undoLast(manager); break;
-		case 10: running = false; break;
+		case 5: saveAsTxt(manager); break;
+		case 6: saveAsCsv(manager); break;
+		case 7: sortTasks(manager, TaskManager::SortMode::ById); break;
+		case 8: sortTasks(manager, TaskManager::SortMode::ByStatus); break;
+		case 9: sortTasks(manager, TaskManager::SortMode::ByTitle); break;
+		case 10: undoLast(manager); break;
+		case 11: running = false; break;
 		default: std::cout << "Нет такого задания!\n"; break;
 		}
 	}
-	if (!manager.save("tasks.txt")) {
+	if (!manager.saveAs<TextWriter>("tasks.txt")) {
 		std::cout << "ВНИМАНИЕ: не удалось сохранить задачи!\n";
 	}
 	return 0;

@@ -1,9 +1,9 @@
-#include "TaskManager.h"
 #include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
+#include <format>
+#include "TaskManager.h"
 
 TaskManager::TaskIter TaskManager::findById(int id) {
 	return std::find_if(m_tasks.begin(), m_tasks.end(), [id](const std::unique_ptr<Task>& task) {return task->id() == id;});
@@ -40,13 +40,7 @@ void TaskManager::printTasks() const {
 	
 	for (const auto& task : m_tasks) {
 		const char mark = task->done() ? 'x' : ' ';
-		std::cout << "["
-			<< mark
-			<< "] "
-			<< task->id()
-			<< ". "
-			<< task->describe()
-			<< "\n";		
+		std::cout << std::format("[{}] {}. {}\n", mark, task->id(), task->describe());
 	}
 }
 
@@ -56,16 +50,6 @@ size_t TaskManager::size() const {
 
 bool TaskManager::empty() const {
 	return m_tasks.empty();
-}
-
-bool TaskManager::save(const std::string& fileName) const {
-	std::ofstream outFile(fileName);
-	if (!outFile) return false;
-	for (const auto& task : m_tasks) {
-		outFile << task->serialize() << '\n';
-	}
-
-	return true;
 }
 
 std::unique_ptr<Task> TaskManager::parseLine(const std::string& line) {
@@ -108,8 +92,18 @@ LoadResult TaskManager::load(const std::string& fileName) {
 	}
 
 	std::string line;
-	
+	bool firstLine = true;
 	while (std::getline(inFile, line)) {
+		if (firstLine) {
+			firstLine = false;
+			if (line.size() >= 3
+				&& static_cast<unsigned char>(line[0]) == 0xEF
+				&& static_cast<unsigned char>(line[1]) == 0xBB
+				&& static_cast<unsigned char>(line[2]) == 0xBF) {
+				line.erase(0, 3);
+			}
+		}
+
 		auto task = parseLine(line);
 		if (task) {
 			m_tasks.push_back(std::move(task));
