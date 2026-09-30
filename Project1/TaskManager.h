@@ -58,6 +58,8 @@ public:
 	template <typename TWriter>
 	bool saveAs(const std::string& fileName) const;
 
+	friend class TaskManagerTest;
+
 private:
 	std::vector<std::unique_ptr<Task>> m_tasks;
 	std::vector<std::unique_ptr<Command>> m_history;
