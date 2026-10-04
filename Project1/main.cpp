@@ -6,10 +6,42 @@
 
 #include <iostream>
 #include <limits>
+#include <mutex>
+#include <thread>
 #include "TaskManager.h"
 
 
 namespace {
+	std::mutex cout_mutex;
+
+	void safePrint(const std::string& line) {
+		std::lock_guard<std::mutex> lock(cout_mutex);
+		std::cout << line << '\n';
+	}
+
+	void reminderThread(std::stop_token st, TaskManager& manager) {
+		while (!st.stop_requested()) {
+			// ждём 5 секунд ИЛИ пока не попросят остановку
+			for (int i = 0; i < 50 && !st.stop_requested(); ++i) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+
+			if (st.stop_requested()) break;
+
+			auto urgent = manager.getUrgentTasks();
+			if (!urgent.empty()) {
+				std::lock_guard<std::mutex> lock(cout_mutex);
+				std::cout << "\n[напоминание] Задачи с дедлайном:\n";
+				for (const auto& t : urgent) {
+					std::cout << "  id=" << t.id << " \"" << t.title
+						<< "\" до " << t.deadline << "\n";
+				}
+				std::cout << "> " << std::flush;   // вернуть приглашение
+			}
+		}
+	}
+
+
 	void clearInput() {
 		std::cin.clear();
 		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -161,14 +193,13 @@ namespace {
 	}
 	
 } //namespace
-
 int main() {
 #ifdef _WIN32
 	SetConsoleCP(CP_UTF8);
 	SetConsoleOutputCP(CP_UTF8);
 #endif
 
-	bool running = true;
+	
 	TaskManager manager;
 	const LoadResult res = manager.load("tasks.txt");
 	if (!res.success) {
@@ -177,6 +208,10 @@ int main() {
 	else if (res.skipped > 0) {
 		std::cout << "Внимание: " << res.skipped << " строк(и) не удалось прочитать.\n";
 	}
+	
+	std::jthread reminder(reminderThread, std::ref(manager));
+
+	bool running = true;
 	while (running) {
 		printMenu();
 		switch (askInt("> ")) {
@@ -194,6 +229,7 @@ int main() {
 		default: std::cout << "Нет такого задания!\n"; break;
 		}
 	}
+	reminder.request_stop();
 	if (!manager.saveAs<TextWriter>("tasks.txt")) {
 		std::cout << "ВНИМАНИЕ: не удалось сохранить задачи!\n";
 	}

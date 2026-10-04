@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <optional>
 
 class Task {
 public:
@@ -8,6 +9,7 @@ public:
 
 	virtual std::string describe() const = 0;
 	virtual std::string serialize() const = 0;
+	virtual std::optional<std::string> deadline() const { return std::nullopt; }
 
 	void toggle();
 	int id() const;
@@ -34,6 +36,7 @@ public:
 
 	std::string describe() const override;
 	std::string serialize() const override;
+	std::optional<std::string> deadline() const override;
 private:
 	std::string m_deadline;
 };

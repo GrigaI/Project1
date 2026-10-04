@@ -45,6 +45,10 @@ std::string DeadlineTask::serialize() const {
 	return std::format("D|{}|{}|{}|{}", id(), title(), done() ? 1 : 0, m_deadline);
 }
 
+std::optional<std::string> DeadlineTask::deadline() const {
+	return m_deadline;
+}
+
 RecurringTask::RecurringTask(int id, const std::string& title, bool done, const std::string& period)
 	: Task(id, title, done), m_period(period) {
 }

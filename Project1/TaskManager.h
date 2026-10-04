@@ -7,8 +7,15 @@
 #include <cstddef>
 #include <fstream>
 #include <format>
+#include <mutex>
 #include "Task.h"
 #include "Command.h"
+
+struct UrgentTask {
+	int id;
+	std::string title;
+	std::string deadline;
+};
 
 struct LoadResult {
 	bool success = false;
@@ -49,11 +56,12 @@ public:
 	bool empty() const;
 	LoadResult load(const std::string& fileName);
 	void sort(SortMode mode);
-	int nextId() const { return m_nextId; }
+	int nextId() const;
 	void insert(std::unique_ptr<Task> task, std::size_t position);
 	std::optional<std::pair<std::unique_ptr<Task>, std::size_t>> extractWithPosition(int id);
 	void pushCommand(std::unique_ptr<Command> cmd);
 	bool undo();
+	std::vector<UrgentTask> getUrgentTasks() const;
 
 	template <typename TWriter>
 	bool saveAs(const std::string& fileName) const;
@@ -61,6 +69,7 @@ public:
 	friend class TaskManagerTest;
 
 private:
+	mutable std::mutex m_mutex;
 	std::vector<std::unique_ptr<Task>> m_tasks;
 	std::vector<std::unique_ptr<Command>> m_history;
 	int m_nextId = 1;
@@ -68,6 +77,7 @@ private:
 
 template<typename TWriter>
 bool TaskManager::saveAs(const std::string& fileName) const {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	std::ofstream out(fileName);
 	if (!out) return false;
 	out.write("\xEF\xBB\xBF", 3);   // UTF-8 BOM

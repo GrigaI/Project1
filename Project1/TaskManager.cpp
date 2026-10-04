@@ -10,6 +10,7 @@ TaskManager::TaskIter TaskManager::findById(int id) {
 }
 
 bool TaskManager::add(std::unique_ptr<Task> task) {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	if (!task) return false;
 	if (task->title().empty()) return false;
 	if (task->id() != m_nextId) return false;
@@ -19,6 +20,7 @@ bool TaskManager::add(std::unique_ptr<Task> task) {
 }
 
 bool TaskManager::remove(int id) {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	auto iter = findById(id);
 	if (iter == m_tasks.end()) return false;
 	m_tasks.erase(iter);
@@ -26,6 +28,7 @@ bool TaskManager::remove(int id) {
 }
 
 bool TaskManager::toggleDone(int id) {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	auto iter = findById(id);
 	if (iter == m_tasks.end()) return false;
 	(*iter)->toggle();
@@ -33,6 +36,7 @@ bool TaskManager::toggleDone(int id) {
 }
 
 void TaskManager::printTasks() const {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	if (m_tasks.empty()) {
 		std::cout << "Список пуст.\n";
 		return;
@@ -45,10 +49,12 @@ void TaskManager::printTasks() const {
 }
 
 size_t TaskManager::size() const {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	return m_tasks.size();
 }
 
 bool TaskManager::empty() const {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	return m_tasks.empty();
 }
 
@@ -82,6 +88,7 @@ std::unique_ptr<Task> TaskManager::parseLine(const std::string& line) {
 }
 
 LoadResult TaskManager::load(const std::string& fileName) {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	LoadResult result;
 	std::ifstream inFile(fileName);
 	m_tasks.clear();
@@ -126,6 +133,7 @@ LoadResult TaskManager::load(const std::string& fileName) {
 }
 
 void TaskManager::sort(SortMode mode) {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	switch (mode) {
 	case SortMode::ById: 
 		std::sort(m_tasks.begin(), m_tasks.end(), 
@@ -146,13 +154,20 @@ void TaskManager::sort(SortMode mode) {
 	
 }
 
+int TaskManager::nextId() const {
+	std::lock_guard<std::mutex> lock(m_mutex);
+	return m_nextId;
+}
+
 void TaskManager::insert(std::unique_ptr<Task> task, std::size_t position) {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	if (!task) return;
 	if (position > m_tasks.size()) position = m_tasks.size();
 	m_tasks.insert(m_tasks.begin() + static_cast<std::ptrdiff_t>(position), std::move(task));
 }
 
 std::optional<std::pair<std::unique_ptr<Task>, std::size_t>> TaskManager::extractWithPosition(int id) {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	auto it = findById(id);
 	if (it == m_tasks.end()) return std::nullopt;
 	const std::size_t pos = static_cast<std::size_t>(std::distance(m_tasks.begin(), it));
@@ -162,14 +177,30 @@ std::optional<std::pair<std::unique_ptr<Task>, std::size_t>> TaskManager::extrac
 }
 
 void TaskManager::pushCommand(std::unique_ptr<Command> cmd) {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	m_history.push_back(std::move(cmd));
 }
 
 bool TaskManager::undo() {
-	if (m_history.empty()) return false;
-	auto cmd = std::move(m_history.back());
-	m_history.pop_back();
+	std::unique_ptr<Command> cmd;
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (m_history.empty()) return false;
+		cmd = std::move(m_history.back());
+		m_history.pop_back();
+	}
+	
 	cmd->undo();
 	return true;
 }
 
+std::vector<UrgentTask> TaskManager::getUrgentTasks() const {
+	std::lock_guard<std::mutex> lock(m_mutex);
+	std::vector<UrgentTask> result;
+	for (const auto& task : m_tasks) {
+		if (auto d = task->deadline()) {
+			result.push_back({ task->id(), task->title(), *d });
+		}
+	}
+	return result;
+}
